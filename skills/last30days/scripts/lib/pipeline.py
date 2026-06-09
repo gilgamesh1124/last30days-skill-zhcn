@@ -11,6 +11,7 @@ from shutil import which
 from typing import Any
 
 from . import (
+    bilibili,
     bird_x,
     bluesky,
     dates,
@@ -60,6 +61,7 @@ SEARCH_ALIAS = {
     "truth": "truthsocial",
     "web": "grounding",
     "xhs": "xiaohongshu",
+    "bili": "bilibili",
     "xquik": "xquik",
 }
 
@@ -77,6 +79,7 @@ MOCK_AVAILABLE_SOURCES = [
     "polymarket",
     "grounding",
     "xiaohongshu",
+    "bilibili",
     "github",
     "perplexity",
     "threads",
@@ -126,6 +129,8 @@ def available_sources(config: dict[str, Any], requested_sources: list[str] | Non
         available.append("perplexity")
     if requested_sources and "xiaohongshu" in requested_sources and env.is_xiaohongshu_available(config):
         available.append("xiaohongshu")
+    if env.is_bilibili_available(config):
+        available.append("bilibili")
     if env.is_threads_available(config):
         available.append("threads")
     if requested_sources and "pinterest" in requested_sources and env.is_pinterest_available(config):
@@ -1028,6 +1033,13 @@ def _retrieve_stream(
             from_date,
             to_date,
             env.get_xiaohongshu_api_base(config),
+            depth=depth,
+        ), {}
+    if source == "bilibili":
+        return bilibili.search_bilibili(
+            subquery.search_query,
+            from_date,
+            to_date,
             depth=depth,
         ), {}
     if source == "perplexity":

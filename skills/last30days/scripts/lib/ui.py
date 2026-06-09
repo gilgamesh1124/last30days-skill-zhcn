@@ -126,6 +126,7 @@ SOURCE_COMPLETION_ORDER = [
     "polymarket",
     "grounding",
     "xiaohongshu",
+    "bilibili",
     "digg",
 ]
 
@@ -141,6 +142,7 @@ SOURCE_COMPLETION_META = {
     "polymarket": ("Polymarket", "market", "markets", Colors.GREEN),
     "grounding": ("Web", "result", "results", Colors.GREEN),
     "xiaohongshu": ("Xiaohongshu", "post", "posts", Colors.RED),
+    "bilibili": ("Bilibili", "video", "videos", Colors.PURPLE),
     "digg": ("Digg", "cluster", "clusters", Colors.YELLOW),
 }
 
@@ -500,6 +502,7 @@ def show_diagnostic_banner(diag: dict):
     has_youtube = "youtube" in available_sources
     has_web = "grounding" in available_sources
     has_xiaohongshu = "xiaohongshu" in available_sources
+    has_bilibili = "bilibili" in available_sources
     x_backend = diag.get("x_backend")
     native_web_backend = diag.get("native_web_backend")
 
@@ -546,6 +549,10 @@ def show_diagnostic_banner(diag: dict):
         if has_xiaohongshu:
             lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.GREEN}✅ Xiaohongshu{Colors.RESET} — API connected + logged in         {Colors.DIM}│{Colors.RESET}")
 
+        # Bilibili (default-on, WBI-signed public search)
+        if has_bilibili:
+            lines.append(f"{Colors.DIM}│{Colors.RESET}  {Colors.GREEN}✅ Bilibili{Colors.RESET}    — WBI-signed search (no auth)        {Colors.DIM}│{Colors.RESET}")
+
         # Web
         if has_web:
             backend = native_web_backend or "native"
@@ -587,6 +594,9 @@ def show_diagnostic_banner(diag: dict):
 
         if has_xiaohongshu:
             lines.append("│  ✅ Xiaohongshu — API connected + logged in         │")
+
+        if has_bilibili:
+            lines.append("│  ✅ Bilibili    — WBI-signed search (no auth)        │")
 
         if has_web:
             backend = native_web_backend or "native"
