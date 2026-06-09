@@ -168,6 +168,24 @@ class TestEnsureSession(unittest.TestCase):
             with self.assertRaises(http.HTTPError):
                 bilibili._ensure_session()
 
+    def test_short_wbi_keys_wrapped_as_http_error(self):
+        """If nav returns keys shorter than the 64 positions MIXIN_KEY_ENC_TAB
+        indexes, mix_key() raises IndexError -> wrapped as a clean HTTPError."""
+        short_nav = {
+            "code": 0,
+            "data": {
+                "wbi_img": {
+                    "img_url": "https://i0.hdslb.com/bfs/wbi/a.png",
+                    "sub_url": "https://i0.hdslb.com/bfs/wbi/b.png",
+                }
+            },
+        }
+        with patch.object(bilibili, "_fetch_buvid3", lambda: "BUVID"), \
+             patch.object(bilibili.http, "get", lambda url, **kw: short_nav):
+            with self.assertRaises(http.HTTPError) as ctx:
+                bilibili._ensure_session()
+        self.assertIn("cookie bootstrap failed", str(ctx.exception))
+
     def test_accepts_anonymous_nav_response(self):
         """Production nav returns code=-101 'not logged in' for anonymous callers,
         but wbi_img is still present. We should accept it as a valid bootstrap."""
@@ -257,6 +275,30 @@ class TestSearchBilibili(unittest.TestCase):
                 bilibili.search_bilibili("x", "2020-01-01", "2030-01-01")
         msg = str(ctx.exception)
         self.assertIn("WBI signature may have rotated", msg)
+
+    def test_v_voucher_clears_session_cache(self):
+        """A WBI rotation must invalidate the cached mixin_key so the next
+        call re-bootstraps instead of replaying the same failure forever."""
+        bilibili._mixin_key_cache = "m" * 32
+        bilibili._cookie_jar_cache = {"buvid3": "STALE"}
+        with self._patch_session(), \
+             patch.object(bilibili.http, "get", lambda url, **kw: _load("v_voucher_response.json")):
+            with self.assertRaises(http.HTTPError):
+                bilibili.search_bilibili("x", "2020-01-01", "2030-01-01")
+        self.assertIsNone(bilibili._mixin_key_cache)
+        self.assertIsNone(bilibili._cookie_jar_cache)
+
+    def test_nonzero_code_clears_session_cache(self):
+        """Any non-zero search code (e.g. expired buvid3) also clears the cache."""
+        bilibili._mixin_key_cache = "m" * 32
+        bilibili._cookie_jar_cache = {"buvid3": "STALE"}
+        with self._patch_session(), \
+             patch.object(bilibili.http, "get",
+                          lambda url, **kw: {"code": -412, "message": "blocked", "data": {}}):
+            with self.assertRaises(http.HTTPError):
+                bilibili.search_bilibili("x", "2020-01-01", "2030-01-01")
+        self.assertIsNone(bilibili._mixin_key_cache)
+        self.assertIsNone(bilibili._cookie_jar_cache)
 
     def test_handles_empty_result_list(self):
         with self._patch_session(), \

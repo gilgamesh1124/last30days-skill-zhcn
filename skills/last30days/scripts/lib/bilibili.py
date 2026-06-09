@@ -203,7 +203,10 @@ def _ensure_session() -> Tuple[str, Dict[str, str]]:
         mixin = bilibili_wbi.mix_key(img_key, sub_key)
     except http.HTTPError:
         raise  # already tagged at the source
-    except (ValueError, KeyError, TypeError) as exc:
+    except (ValueError, KeyError, TypeError, IndexError) as exc:
+        # IndexError guards malformed WBI keys: if nav returns img_key+sub_key
+        # shorter than the 64 positions MIXIN_KEY_ENC_TAB indexes, mix_key()
+        # raises IndexError, which we surface as a clean bootstrap failure.
         raise http.HTTPError(
             "Bilibili: cookie bootstrap failed: {}".format(exc)
         ) from exc
@@ -273,6 +276,12 @@ def search_bilibili(topic: str, from_date: str, to_date: str, depth: str = "defa
     code = resp.get("code", -1)
     data = resp.get("data") if isinstance(resp.get("data"), dict) else {}
     if code != 0:
+        # Any non-zero search code means the cached session may be stale: a
+        # v_voucher signals WBI key rotation, and other error codes can follow
+        # an expired buvid3. Clear the process-level cache so the next call
+        # re-bootstraps fresh keys instead of replaying the same failure for
+        # the rest of the process lifetime.
+        _reset_session_cache()
         if "v_voucher" in data:
             raise http.HTTPError(
                 "Bilibili search: WBI signature may have rotated "
