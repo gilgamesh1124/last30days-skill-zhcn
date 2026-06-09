@@ -7,9 +7,14 @@ positions in (img_key + sub_key) onto positions in the 32-char mixin_key.
 """
 
 import hashlib
+import re
 import time
 import urllib.parse
 from typing import Any, Dict, List, Optional, Tuple
+
+# Per the WBI spec, these characters are stripped from each parameter value
+# before the canonical query string is built for signing.
+_WBI_VALUE_FILTER = re.compile(r"[!'()*]")
 
 # Source: github.com/SocialSisterYi/bilibili-API-collect/docs/misc/sign/wbi.md
 # If signing breaks (e.g. /search returns code=-352 with v_voucher), re-verify
@@ -67,9 +72,18 @@ def sign_params(
 
     Algorithm (per SocialSisterYi/bilibili-API-collect wbi.md):
       1. wts = int(time.time()) unless `ts` is injected (test seam).
-      2. Sort the union of params and {wts}, URL-encode each value.
-      3. Join as k1=v1&k2=v2&...
-      4. Append mixin_key, MD5, hex-digest -> w_rid.
+      2. Add wts to the params and sort by key.
+      3. For each value, strip the characters !'()* then encode with
+         encodeURIComponent semantics (space -> %20, not +).
+      4. Join as k1=v1&k2=v2&..., append mixin_key, MD5 -> w_rid.
+
+    The strip + %20 encoding matches B站's official JS reference exactly.
+    Without it, topics containing !'()* or spaces (e.g. "C++ (anime)",
+    "长沙 麻将") produce a w_rid the server rejects with a v_voucher.
+
+    The returned dict keeps the caller's original (unstripped) values; only
+    the signing canonical string is filtered. The server decodes the request
+    and re-canonicalizes the same way, so the signature still matches.
 
     Args:
         params: caller's request parameters. Not mutated.
@@ -85,6 +99,21 @@ def sign_params(
     signed = dict(params)
     signed["wts"] = ts
 
-    query = urllib.parse.urlencode(sorted(signed.items()))
-    signed["w_rid"] = hashlib.md5((query + mixin_key).encode("utf-8")).hexdigest()
+    canonical = "&".join(
+        "{}={}".format(
+            _encode_uri_component(key),
+            _encode_uri_component(_WBI_VALUE_FILTER.sub("", str(signed[key]))),
+        )
+        for key in sorted(signed)
+    )
+    signed["w_rid"] = hashlib.md5((canonical + mixin_key).encode("utf-8")).hexdigest()
     return signed
+
+
+def _encode_uri_component(value: Any) -> str:
+    """Encode a value the way JavaScript's encodeURIComponent does.
+
+    Leaves A-Za-z0-9 and -_.!~*'() unescaped; encodes everything else,
+    including space as %20 (not + as urllib's quote_plus would).
+    """
+    return urllib.parse.quote(str(value), safe="-_.!~*'()")
