@@ -66,6 +66,7 @@ SOURCE_LABELS = {
     "hackernews": "Hacker News",
     "truthsocial": "Truth Social",
     "xiaohongshu": "Xiaohongshu",
+    "bilibili": "Bilibili",
     "x": "X",
     "github": "GitHub",
     "digg": "Digg",
@@ -842,7 +843,7 @@ def render_full(report: schema.Report) -> str:
     lines.append("## All Items by Source")
     lines.append("")
     source_order = ["reddit", "x", "youtube", "tiktok", "instagram", "threads", "pinterest",
-                    "hackernews", "bluesky", "truthsocial", "polymarket", "grounding", "xiaohongshu", "github", "digg", "perplexity"]
+                    "hackernews", "bluesky", "truthsocial", "polymarket", "grounding", "xiaohongshu", "bilibili", "github", "digg", "perplexity"]
     for source in source_order:
         items = report.items_by_source.get(source, [])
         if not items:

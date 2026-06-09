@@ -674,6 +674,18 @@ def is_xiaohongshu_available(config: dict[str, Any]) -> bool:
         return False
 
 
+def is_bilibili_available(config: dict[str, Any]) -> bool:
+    """Bilibili is always available unless explicitly disabled.
+
+    The adapter auto-bootstraps a buvid3 cookie and uses public WBI-signed
+    search — no API key, no login. Honors LAST30DAYS_DISABLE_BILIBILI=1 as
+    a kill switch for operators who want to skip the source.
+    """
+    if os.environ.get("LAST30DAYS_DISABLE_BILIBILI") == "1":
+        return False
+    return True
+
+
 # Backward compat alias
 is_apify_available = is_tiktok_available
 
