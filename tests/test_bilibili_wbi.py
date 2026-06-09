@@ -85,6 +85,8 @@ class TestSignParams(unittest.TestCase):
         self.assertEqual(a["w_rid"], b["w_rid"])
 
     def test_w_rid_matches_md5_of_sorted_query_plus_key(self):
+        # Clean alphanumeric values: encodeURIComponent and urlencode agree,
+        # so this also confirms the new canonicalization is backward-compatible.
         params = {"foo": "114", "bar": "514", "baz": "1919810"}
         mixin = "ea1db124af3c7062474693fa704f4ff8"
         ts = 1702204169
@@ -94,6 +96,34 @@ class TestSignParams(unittest.TestCase):
 
         signed = bilibili_wbi.sign_params(params, mixin_key=mixin, ts=ts)
         self.assertEqual(expected_w_rid, signed["w_rid"])
+
+    def test_strips_wbi_reserved_chars_and_encodes_space_as_pct20(self):
+        # "C++ (anime)!" -> strip ()! -> "C++ anime" -> encodeURIComponent
+        # -> "C%2B%2B%20anime" (space is %20, not +).
+        params = {"keyword": "C++ (anime)!"}
+        mixin = "ea1db124af3c7062474693fa704f4ff8"
+        ts = 1702204169
+
+        expected_query = "keyword=C%2B%2B%20anime&wts=1702204169"
+        expected_w_rid = hashlib.md5((expected_query + mixin).encode("utf-8")).hexdigest()
+
+        signed = bilibili_wbi.sign_params(params, mixin_key=mixin, ts=ts)
+        self.assertEqual(expected_w_rid, signed["w_rid"])
+        # Original value is preserved in the returned params (only signing strips).
+        self.assertEqual("C++ (anime)!", signed["keyword"])
+
+    def test_reserved_chars_change_the_signature(self):
+        # Proves the strip/%20 fix actually matters: the naive quote_plus
+        # encoding (no strip, space -> +) yields a different, wrong w_rid.
+        params = {"keyword": "Yay! (x)"}
+        mixin = "m" * 32
+        ts = 1
+
+        naive_query = urllib.parse.urlencode(sorted({**params, "wts": ts}.items()))
+        naive_w_rid = hashlib.md5((naive_query + mixin).encode("utf-8")).hexdigest()
+
+        signed = bilibili_wbi.sign_params(params, mixin_key=mixin, ts=ts)
+        self.assertNotEqual(naive_w_rid, signed["w_rid"])
 
 
 if __name__ == "__main__":
