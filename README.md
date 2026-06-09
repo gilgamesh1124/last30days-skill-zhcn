@@ -1,5 +1,7 @@
 # /last30days
 
+<p align="right"><a href="README.zh-CN.md">中文</a> · <b>English</b></p>
+
 <p align="center">
   <a href="https://github.com/mvanhorn/last30days-skill">
     <img src="https://img.shields.io/badge/%231-Repository%20Of%20The%20Day-6f42c1?style=for-the-badge&logo=github&label=GITHUB%20TRENDING" alt="GitHub Trending #1 Repository Of The Day" />
