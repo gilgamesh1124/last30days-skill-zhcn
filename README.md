@@ -12,6 +12,8 @@
 
 **An AI agent-led search engine scored by upvotes, likes, and real money - not editors.**
 
+> **This is a fork of [mvanhorn/last30days-skill](https://github.com/mvanhorn/last30days-skill)** that extends the engine into Chinese platforms. **Bilibili (B站)** ships now; **Weibo** and **Zhihu** are on the roadmap. See [Chinese platforms (this fork)](#chinese-platforms-this-fork). Everything else tracks upstream.
+
 This README tracks the current v3 pipeline. The runtime skill spec lives in [skills/last30days/SKILL.md](skills/last30days/SKILL.md), which is the source of truth for the latest command and setup behavior.
 
 **Claude Code (recommended — auto-updates via marketplace):**
@@ -70,14 +72,31 @@ If you're meeting with a CEO, have you read all their tweets and YouTube transcr
 | **Threads** | The post-Twitter text layer. Conversations from creators and brands. |
 | **Pinterest** | Visual discovery. Pins, saves, and comments on products and ideas. |
 | **Bluesky** | The decentralized social layer. AT Protocol posts from the post-Twitter migration. |
+| **Bilibili (B站)** | China's video town square. Ranked by the engagement that B站 users actually spend — coins (a finite weekly budget), favorites, likes, and danmaku. Public WBI-signed search, zero config, no login. |
+| **Xiaohongshu (RED)** | The Chinese lifestyle and product-discovery layer. Notes ranked by likes, comments, and favorites. |
 | **Perplexity** | Grounded web search with citations via Sonar Pro. |
 | **Web** | The editorial coverage, the blog comparisons. One signal of many, not the only one. |
 
-Community contributors keep adding more. Truth Social, Xiaohongshu (RED), and others are in the engine with more on the way.
+Community contributors keep adding more. Truth Social and others are in the engine with more on the way.
 
 A Reddit thread with 1,500 upvotes is a stronger signal than a blog post nobody read. A TikTok with 3.6M views tells you more about what's culturally relevant than a press release. Polymarket odds backed by $66K in volume are harder to argue with than a pundit's guess.
 
 The synthesis ranks by what real people actually engaged with. Social relevancy, not SEO relevancy.
+
+## Chinese platforms (this fork)
+
+The walled-garden problem is worse in Chinese tech: Google, Reddit, and X barely touch what's happening on 微博, 知乎, B站, or 小红书. The conversation that decides a product launch or a policy reaction lives there, behind WBI signatures and login walls, invisible to every Western AI.
+
+This fork extends the same parallel-search, engagement-ranked engine into that world.
+
+| Platform | Status | How |
+|----------|--------|-----|
+| **Bilibili (B站)** | ✅ Shipped | Public WBI-signed search, auto-bootstrapped `buvid3` cookie, zero config. Ranked by coins > favorites > likes > danmaku > plays. |
+| **Xiaohongshu (RED)** | ✅ Shipped | Via the `xpzouying/xiaohongshu-mcp` REST bridge. |
+| **Weibo (微博)** | 🛠 Planned | Hot-search + keyword search. Next adapter on the roadmap. |
+| **Zhihu (知乎)** | 🛠 Planned | Deep-discussion question pages via the mobile API. |
+
+Each platform is an independent adapter modeled on the upstream `xiaohongshu_api` pattern — one file, one `search_*` entry point, normalized to the same engagement-scored web-item shape the rest of the pipeline already understands. Disable any of them per-run with `EXCLUDE_SOURCES`, or globally with the platform's kill-switch env var (e.g. `LAST30DAYS_DISABLE_BILIBILI=1`).
 
 ## What people actually use it for
 
