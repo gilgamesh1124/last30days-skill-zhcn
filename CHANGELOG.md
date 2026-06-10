@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Bilibili (B站) as a default web source.** Searches the public WBI-signed `/x/web-interface/wbi/search/type` endpoint with an auto-bootstrapped `buvid3` cookie — no user configuration or API key required. Items are ranked by engagement (coin > favorite > like > danmaku > play), surfacing the videos B站 users actually invested in. Disable via `LAST30DAYS_DISABLE_BILIBILI=1`.
+- **Bilibili (B站) as a default web source.** Searches the public WBI-signed `/x/web-interface/wbi/search/type` endpoint with an auto-bootstrapped `buvid3` cookie — no user configuration or API key required. Items are ranked by the engagement the search API returns (favorite > like > danmaku > play). Disable via `LAST30DAYS_DISABLE_BILIBILI=1`.
 
 ## [3.3.2] - 2026-06-06
 
