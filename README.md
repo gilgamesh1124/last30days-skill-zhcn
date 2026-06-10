@@ -74,7 +74,7 @@ If you're meeting with a CEO, have you read all their tweets and YouTube transcr
 | **Threads** | The post-Twitter text layer. Conversations from creators and brands. |
 | **Pinterest** | Visual discovery. Pins, saves, and comments on products and ideas. |
 | **Bluesky** | The decentralized social layer. AT Protocol posts from the post-Twitter migration. |
-| **Bilibili (B站)** | China's video town square. Ranked by the engagement that B站 users actually spend — coins (a finite weekly budget), favorites, likes, and danmaku. Public WBI-signed search, zero config, no login. |
+| **Bilibili (B站)** | China's video town square. Ranked by the engagement the search API returns — favorites, likes, danmaku, and plays. Public WBI-signed search, zero config, no login. |
 | **Xiaohongshu (RED)** | The Chinese lifestyle and product-discovery layer. Notes ranked by likes, comments, and favorites. |
 | **Perplexity** | Grounded web search with citations via Sonar Pro. |
 | **Web** | The editorial coverage, the blog comparisons. One signal of many, not the only one. |
@@ -93,7 +93,7 @@ This fork extends the same parallel-search, engagement-ranked engine into that w
 
 | Platform | Status | How |
 |----------|--------|-----|
-| **Bilibili (B站)** | ✅ Shipped | Public WBI-signed search, auto-bootstrapped `buvid3` cookie, zero config. Ranked by coins > favorites > likes > danmaku > plays. |
+| **Bilibili (B站)** | ✅ Shipped | Public WBI-signed search, auto-bootstrapped `buvid3` cookie, zero config. Ranked by favorites > likes > danmaku > plays. |
 | **Xiaohongshu (RED)** | ✅ Shipped | Via the `xpzouying/xiaohongshu-mcp` REST bridge. |
 | **Weibo (微博)** | 🛠 Planned | Hot-search + keyword search. Next adapter on the roadmap. |
 | **Zhihu (知乎)** | 🛠 Planned | Deep-discussion question pages via the mobile API. |
