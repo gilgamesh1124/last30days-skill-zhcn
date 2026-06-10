@@ -55,24 +55,24 @@ class TestToInt(unittest.TestCase):
 
 class TestRelevance(unittest.TestCase):
     def test_clamped_min_to_0_05(self):
-        self.assertEqual(0.05, bilibili._relevance_from_interactions(0, 0, 0, 0, 0))
+        self.assertEqual(0.05, bilibili._relevance_from_interactions(0, 0, 0, 0))
 
     def test_clamped_max_to_1_0(self):
         self.assertEqual(
             1.0,
-            bilibili._relevance_from_interactions(10**9, 10**9, 10**9, 10**9, 10**9),
+            bilibili._relevance_from_interactions(10**9, 10**9, 10**9, 10**9),
         )
 
-    def test_coin_weighted_higher_than_favorite(self):
-        base = bilibili._relevance_from_interactions(100, 100, 100, 0, 0)
-        with_fav = bilibili._relevance_from_interactions(100, 100, 100, 100, 0)
-        with_coin = bilibili._relevance_from_interactions(100, 100, 100, 0, 100)
-        self.assertGreater(with_coin, with_fav)
-        self.assertGreater(with_fav, base)
+    def test_favorite_weighted_higher_than_like(self):
+        base = bilibili._relevance_from_interactions(100, 0, 0, 0)
+        with_like = bilibili._relevance_from_interactions(100, 100, 0, 0)
+        with_fav = bilibili._relevance_from_interactions(100, 0, 0, 100)
+        self.assertGreater(with_fav, with_like)
+        self.assertGreater(with_like, base)
 
     def test_normal_range(self):
         score = bilibili._relevance_from_interactions(
-            play=100_000, like=3_000, danmaku=500, favorite=1_500, coin=2_000
+            play=100_000, like=3_000, danmaku=500, favorite=1_500
         )
         self.assertGreaterEqual(score, 0.3)
         self.assertLessEqual(score, 0.7)
@@ -233,7 +233,10 @@ class TestSearchBilibili(unittest.TestCase):
         self.assertEqual("high", first["date_confidence"])
         self.assertIn("长沙麻将", first["title"])
         self.assertEqual(124000, first["engagement"]["play"])
-        self.assertGreaterEqual(first["engagement"]["coin"], 0)
+        # coin/share are not returned by /search/type, so they must not appear.
+        self.assertNotIn("coin", first["engagement"])
+        self.assertNotIn("share", first["engagement"])
+        self.assertIn("review", first["engagement"])
         self.assertEqual("BV1AA1xxxxxx", first["extra"]["bvid"])
         self.assertEqual("测试UP主A", first["extra"]["author"])
         self.assertGreaterEqual(first["relevance"], 0.05)
@@ -250,6 +253,26 @@ class TestSearchBilibili(unittest.TestCase):
             )
         self.assertEqual(1, len(items))
         self.assertEqual("2025-05-28", items[0]["date"])
+
+    def test_drops_items_with_no_parseable_date(self):
+        """An item whose pubdate can't be parsed must not silently bypass the
+        date-window filter — it is dropped."""
+        resp = {
+            "code": 0,
+            "data": {
+                "result": [
+                    {"type": "video", "bvid": "BV1dated", "title": "dated",
+                     "pubdate": 1748390400},  # 2025-05-28, inside window
+                    {"type": "video", "bvid": "BV1undated", "title": "undated",
+                     "pubdate": 0},  # _pubdate_to_iso -> None
+                ]
+            },
+        }
+        with self._patch_session(), \
+             patch.object(bilibili.http, "get", lambda url, **kw: resp):
+            items = bilibili.search_bilibili("x", "2025-01-01", "2025-12-31")
+        self.assertEqual(1, len(items))
+        self.assertEqual("BV1dated", items[0]["extra"]["bvid"])
 
     def test_respects_depth_caps(self):
         captured = {}

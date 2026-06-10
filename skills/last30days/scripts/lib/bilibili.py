@@ -58,19 +58,24 @@ def _to_int(value: Any) -> int:
         return 0
 
 
-def _relevance_from_interactions(play: int, like: int, danmaku: int, favorite: int, coin: int) -> float:
+def _relevance_from_interactions(play: int, like: int, danmaku: int, favorite: int) -> float:
     """Heuristic 0.05-1.0 relevance from B站 engagement signals.
 
-    Weights (descending): coin > favorite > like > danmaku > play.
-    Rationale: coins cost users a finite weekly budget -- strongest signal.
-    Favorites imply retention intent. Likes are light affirmation. Danmaku
-    is B站-specific participation. Plays are passive baseline.
+    Weights (descending): favorite > like > danmaku > play.
+    Rationale: favorites imply retention intent -- the strongest signal the
+    search API exposes. Likes are light affirmation. Danmaku is B站-specific
+    participation. Plays are passive baseline.
+
+    Note: coins are B站's strongest endorsement, but /search/type does not
+    return a coin count, so they are deliberately absent from this formula.
+    Coin-weighted scoring belongs with the per-video enrichment follow-up
+    that fetches full stats.
 
     Uses a log10 compression on the weighted sum so that engagement scales
     smoothly from a tiny video (~0.05) to a viral hit (~1.0), with a
     moderately popular video landing near 0.5.
     """
-    weighted = play * 1.0 + like * 2.0 + danmaku * 1.5 + favorite * 2.5 + coin * 3.0
+    weighted = play * 1.0 + like * 2.0 + danmaku * 1.5 + favorite * 2.5
     if weighted <= 0:
         return 0.05
     # log10(weighted) maps: 10 -> 1, 1k -> 3, 1M -> 6, 10M -> 7. Divide by
@@ -303,10 +308,15 @@ def search_bilibili(topic: str, from_date: str, to_date: str, depth: str = "defa
         item = _normalize_video(raw, index=len(out) + 1)
         if item is None:
             continue
-        if item["date"]:
-            d = _parse_date(item["date"])
-            if d < from_d or d > to_d:
-                continue
+        # Drop items we can't place in the requested window. B站 search returns
+        # an authoritative pubdate for virtually every result, so this only
+        # sheds the rare malformed item rather than letting undated content
+        # silently bypass the date filter.
+        if not item["date"]:
+            continue
+        d = _parse_date(item["date"])
+        if d < from_d or d > to_d:
+            continue
         out.append(item)
     return out
 
@@ -327,14 +337,12 @@ def _normalize_video(raw: Dict[str, Any], index: int) -> Optional[Dict[str, Any]
     danmaku = _to_int(raw.get("video_review"))
     favorite = _to_int(raw.get("favorites"))
     review = _to_int(raw.get("review"))
-    coin = _to_int(raw.get("coin"))
-    share = _to_int(raw.get("share"))
 
-    relevance = _relevance_from_interactions(play, like, danmaku, favorite, coin)
+    relevance = _relevance_from_interactions(play, like, danmaku, favorite)
 
     why = (
         "Bilibili engagement: play={}, like={}, danmaku={}, "
-        "favorite={}, coin={}".format(play, like, danmaku, favorite, coin)
+        "favorite={}, comments={}".format(play, like, danmaku, favorite, review)
     )
 
     return {
@@ -347,13 +355,14 @@ def _normalize_video(raw: Dict[str, Any], index: int) -> Optional[Dict[str, Any]
         "date_confidence": "high" if iso else "low",
         "relevance": relevance,
         "why_relevant": why,
+        # /search/type only returns these counters; coin and share are not in
+        # the response, so they are intentionally omitted rather than reported
+        # as a misleading zero. A per-video enrichment follow-up can add them.
         "engagement": {
             "play": play,
             "like": like,
             "danmaku": danmaku,
             "favorite": favorite,
-            "coin": coin,
-            "share": share,
             "review": review,
         },
         "extra": {
