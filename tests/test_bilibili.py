@@ -232,6 +232,10 @@ class TestSearchBilibili(unittest.TestCase):
         self.assertEqual("2025-05-28", first["date"])
         self.assertEqual("high", first["date_confidence"])
         self.assertIn("长沙麻将", first["title"])
+        # Both title and snippet must be free of <em> highlight tags.
+        self.assertNotIn("<em", first["title"])
+        self.assertNotIn("<em", first["snippet"])
+        self.assertIn("长沙麻将", first["snippet"])
         self.assertEqual(124000, first["engagement"]["play"])
         # coin/share are not returned by /search/type, so they must not appear.
         self.assertNotIn("coin", first["engagement"])

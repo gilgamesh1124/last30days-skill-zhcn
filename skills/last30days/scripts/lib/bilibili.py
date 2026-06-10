@@ -328,7 +328,9 @@ def _normalize_video(raw: Dict[str, Any], index: int) -> Optional[Dict[str, Any]
         return None
 
     title = _strip_em_tags(raw.get("title")).strip()
-    description = str(raw.get("description") or "").strip()
+    # B站 highlights the matched keyword with <em> tags in the description too,
+    # not just the title, so strip it here as well before it becomes the snippet.
+    description = _strip_em_tags(raw.get("description")).strip()
     pubdate = raw.get("pubdate") or raw.get("senddate")
     iso = _pubdate_to_iso(pubdate)
 
